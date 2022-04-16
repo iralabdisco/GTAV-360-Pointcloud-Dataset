@@ -25,7 +25,7 @@ if __name__ == '__main__':
     point_map = []
     first = True
     for frame in frames:
-        pcd = load_360_point_cloud_relative_location(frame, dataset_folder)
+        pcd = load_360_point_cloud_global_location(frame, dataset_folder)
         pcd = pcd.voxel_down_sample(voxel_size=1)
         if first:
             point_map = np.float32(pcd.points)
