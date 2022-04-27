@@ -2,7 +2,7 @@ from audioop import mul
 import pandas as pd
 import open3d as o3d
 import numpy as np
-from tools import from_bin_to_points, load_position, load_rotation
+from tools import from_bin_to_pcd, from_bin_to_points, load_position, load_rotation
 from itertools import repeat
 import argparse, os, multiprocessing, csv
 
@@ -18,24 +18,25 @@ def options():
 def create_360(frame, velodyne_folder, pcd_360_folder, pose_folder, pose_360_folder):
     print('computing frame {}'.format(frame))
     try:
-        print(frame)
+        #print(frame)
         first = True
         points_list = []
         position_list = []
         for sector in range(1, 5):
-            print(sector)
+            #print(sector)
             velopath = os.path.join(velodyne_folder, os.path.join('velodyne_{:01d}'.format(sector), '{:06d}.bin'.format(frame)))
             posepath = os.path.join(pose_folder, os.path.join('pose_{:01d}'.format(sector), '{:06d}.txt'.format(frame)))
-            points = from_bin_to_points(velopath)
+            pcd = from_bin_to_pcd(velopath)
             t = load_position(posepath)
             R = load_rotation(posepath)
-            points = points.dot(R)
+            pcd.rotate(R, center=(0, 0, 0))
+            #pcd.translate(t)
             position_list.append(t)
             if first:
-                points_list = np.float32(points)
+                points_list = np.float32(pcd.points)
                 first = False
             else:
-                points_list = np.vstack((points_list, np.float32(points)))
+                points_list = np.vstack((points_list, np.float32(pcd.points)))
         mean_position = np.mean(position_list, axis=0)
         file = open(os.path.join(pose_360_folder, '{:06d}.txt'.format(frame)),'w', newline='')
         np.savetxt(file, mean_position)
@@ -66,8 +67,8 @@ def main(ARGS):
     dataset_folder = os.path.join(base_folder, ARGS.run)
     assert os.path.isdir(dataset_folder), '{} run does not exist!'.format(ARGS.run)
     cpu_count = multiprocessing.cpu_count()
-    vehicle_pose_file = pd.read_csv(dataset_folder + '/vehicle_pose.txt', header=None, names=['x', 'y', 'z', 'roll', 'pitch', 'yaw'])
-    n_frames = len(vehicle_pose_file.index)
+    vehicle_pose_file = pd.read_csv(dataset_folder + '/location.txt', header=None, index_col=None, names=['index','x', 'y', 'z', 'roll', 'pitch', 'yaw'])
+    n_frames = vehicle_pose_file['index'].to_list()
     velodyne_folder = os.path.join(dataset_folder ,'velodyne')
     pose_folder = os.path.join(dataset_folder ,'pose')
 
@@ -83,7 +84,7 @@ def main(ARGS):
     print('starting creating *.pcd files...')
     #create_360(2, velodyne_folder, pcd_360_folder, pose_folder, pose_360_folder)
     with multiprocessing.Pool(cpu_count) as pool1:
-        check = pool1.starmap(create_360, zip(range(0, n_frames), repeat(velodyne_folder), repeat(pcd_360_folder), repeat(pose_folder), repeat(pose_360_folder)))
+        check = pool1.starmap(create_360, zip(n_frames, repeat(velodyne_folder), repeat(pcd_360_folder), repeat(pose_folder), repeat(pose_360_folder)))
     print('*.pcd files created! \n')
     
     #pose_prec = np.float32(vehicle_pose_file.iloc[0])

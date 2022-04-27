@@ -1,7 +1,7 @@
 import open3d as o3d
 import numpy as np
 import argparse, os
-from tools import load_360_point_cloud_global_location, load_360_point_cloud_relative_location
+from tools import load_360_point_cloud_o3d, load_360_point_cloud_global_location
 
 base_folder = os.environ['DEEPGTAV_EXPORT_DIR']
 
@@ -39,3 +39,4 @@ if __name__ == '__main__':
     map_pcd.paint_uniform_color([0, 0.706, 1])
     map_pcd.estimate_normals()
     o3d.visualization.draw_geometries([map_pcd])
+    o3d.io.write_point_cloud(os.path.join(dataset_folder, '{}_complete_map.pcd'.format(ARGS.run)), map_pcd, write_ascii=True)
