@@ -87,7 +87,7 @@ def load_360_point_cloud(frame, path):
     return np.float32(pcd.points)
 
 def load_360_point_cloud_o3d(frame, path):
-    t = load_360_global_location(frame, path)
+    #t = load_360_global_location(frame, path)
     pcd = o3d.io.read_point_cloud(os.path.join(path, os.path.join('velodyne_360', '{:06d}.pcd'.format(frame))))
     return pcd
 
