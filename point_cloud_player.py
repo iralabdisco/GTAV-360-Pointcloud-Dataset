@@ -13,11 +13,6 @@ def options():
     args = parser.parse_args()
     return args
 
-#def custom_draw_geometries(frame_list):
-
-
-#def custom_draw_geometries_with_callback(points)
-
 def main():
     ARGS = options()
     dataset_folder = os.path.join(base_folder, ARGS.run)

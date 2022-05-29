@@ -37,6 +37,4 @@ if __name__ == '__main__':
     map_pcd.points = o3d.utility.Vector3dVector(point_map)
     map_pcd = map_pcd.voxel_down_sample(voxel_size=1)
     map_pcd.paint_uniform_color([0, 0.706, 1])
-    map_pcd.estimate_normals()
-    o3d.visualization.draw_geometries([map_pcd])
     o3d.io.write_point_cloud(os.path.join(dataset_folder, '{}_complete_map.pcd'.format(ARGS.run)), map_pcd, write_ascii=True)

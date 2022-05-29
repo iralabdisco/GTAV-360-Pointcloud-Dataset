@@ -19,9 +19,6 @@ def load_point_cloud_in_world_frame(frame: int, sector: int):
     pcd = from_bin_to_pcd('C:\\Users\\giovi\\Desktop\\Bicocca\\TESI_MAGISTRALE\\GTAVDataset\\object\\velodyne\\velodyne_{}\\{:06d}.bin'.format(sector, frame))
     T = load_transformation_matrix('C:\\Users\\giovi\\Desktop\\Bicocca\\TESI_MAGISTRALE\\GTAVDataset\\object\\pose\\pose_{}\\{:06d}.txt'.format(sector, frame))
     pcd.transform(T)
-    #mesh = o3d.geometry.TriangleMesh.create_coordinate_frame()
-    #mesh.translate(T[:3, 3])
-    #o3d.visualization.draw_geometries([mesh, pcd])
     return pcd
 
 def load_position(path_to_pose_file):
@@ -31,13 +28,11 @@ def load_position(path_to_pose_file):
     t[0] = t[1]
     t[1] = -tmp
     t[2] = -t[2]
-    #print('world coordinates: ', t)
     return t
 
 def load_rotation(path_to_pose_file):
     pose_file = pd.read_csv(path_to_pose_file, header=None)
     r = np.float32(pose_file.iloc[3])
-    #print('world rotation: ', r)
     r = rot.from_euler('XYZ', r, degrees=True)
     return r.as_matrix()    
 
@@ -63,40 +58,31 @@ def from_bin_to_points(path_to_bin_file):
 def load_360_point_cloud_relative_location(frame, path):
     points = load_360_point_cloud(frame, path)
     t = load_point_cloud_location(frame, path, 'relative')
-    #print(t)
     points -= t
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
-    return pcd#.transform(T)
+    return pcd
 
 def load_360_point_cloud_global_location(frame, path):
     points = load_360_point_cloud(frame, path)
     t = load_360_global_location(frame, path)
-    #tmp = t[0]
-    t[0] = t[0]
-    t[1] = -t[1]
-    t[2] = t[2]
-    #print(t)
+    print(t)
     points += t
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
-    return pcd#.transform(T)
+    return pcd
 
 def load_360_point_cloud(frame, path):
     pcd = o3d.io.read_point_cloud(os.path.join(path, os.path.join('velodyne_360', '{:06d}.pcd'.format(frame))))
     return np.float32(pcd.points)
 
 def load_360_point_cloud_o3d(frame, path):
-    #t = load_360_global_location(frame, path)
     pcd = o3d.io.read_point_cloud(os.path.join(path, os.path.join('velodyne_360', '{:06d}.pcd'.format(frame))))
     return pcd
 
 def load_360_global_location(frame, path):
     print(os.path.join(path, os.path.join('location_360', '{:06d}.txt'.format(frame))))
     t = np.loadtxt(os.path.join(path, os.path.join('location_360', '{:06d}.txt'.format(frame))))
-    #tmp = t[0]
-    t[0] = t[0]
-    t[1] = -t[1]
     t[2] = -t[2]
     return t
 
@@ -114,3 +100,13 @@ def load_point_cloud_location(frame, path, loc_type='relative'):
     t[1] = -t[1]
     t[2] = -t[2]
     return t
+
+def print_path_length(location_folder):
+    distance = 0
+    locations = []
+    for frame in os.listdir(location_folder):
+        p = np.loadtxt(os.path.join(location_folder, frame))
+        locations.append(p)
+    for p in range(0, len(locations)-1):
+        distance += np.linalg.norm(locations[p+1]-locations[p])
+    print(distance)

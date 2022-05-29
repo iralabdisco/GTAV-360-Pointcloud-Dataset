@@ -18,19 +18,16 @@ def options():
 def create_360(frame, velodyne_folder, pcd_360_folder, pose_folder, pose_360_folder):
     print('computing frame {}'.format(frame))
     try:
-        #print(frame)
         first = True
         points_list = []
         position_list = []
         for sector in range(1, 5):
-            #print(sector)
             velopath = os.path.join(velodyne_folder, os.path.join('velodyne_{:01d}'.format(sector), '{:06d}.bin'.format(frame)))
             posepath = os.path.join(pose_folder, os.path.join('pose_{:01d}'.format(sector), '{:06d}.txt'.format(frame)))
             pcd = from_bin_to_pcd(velopath)
             t = load_position(posepath)
             R = load_rotation(posepath)
             pcd.rotate(R, center=(0, 0, 0))
-            #pcd.translate(t)
             position_list.append(t)
             if first:
                 points_list = np.float32(pcd.points)
@@ -82,7 +79,6 @@ def main(ARGS):
         os.mkdir(pose_360_folder)
 
     print('starting creating *.pcd files...')
-    #create_360(2, velodyne_folder, pcd_360_folder, pose_folder, pose_360_folder)
     with multiprocessing.Pool(cpu_count) as pool1:
         check = pool1.starmap(create_360, zip(n_frames, repeat(velodyne_folder), repeat(pcd_360_folder), repeat(pose_folder), repeat(pose_360_folder)))
     print('*.pcd files created! \n')
