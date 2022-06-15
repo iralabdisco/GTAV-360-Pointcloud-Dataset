@@ -2,7 +2,7 @@
 **GTAVSynth** is a synthetic dataset generated using Grand Theft Auto V (GTAV).
 
 
-Direct URL to data: DO BE DONE
+Direct URL to data: [GTASynth](https://osf.io/pku3e/)
 
 ## Type of Data
 <table class="tg">
