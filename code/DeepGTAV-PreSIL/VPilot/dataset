@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from deepgtav.messages import Start, Stop, Dataset, frame2numpy, Scenario, Config
+from deepgtav.client import Client
+from deepgtav.export import printInstances, printCalib
+
+import argparse
+import time
+import cv2
+import datetime
+import os
+import errno
+import math
+
+def ensureDirExists(filename):
+    if not os.path.exists(os.path.dirname(filename)):
+        try:
+            os.makedirs(os.path.dirname(filename))
+        except OSError as exc: # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+
+width = 1920
+height = 1080
+#width = 1600
+#height = 900
+
+index = 0 #Use startIndex to change index to start on
+startIndex = 0
+
+oldExport = True
+recordScenario = False
+positionScenario = False
+tracking = False
+collectStationary = True
+collectVehicles = True
+collectPeds = True
+collectOffscreen = False
+captureRate = 5
+driveMode = 786603 #Normal?
+
+base_folder = os.environ['DEEPGTAV_EXPORT_DIR'] + "\\"
+if tracking:
+    base_folder = base_folder + "tracking\\"
+    collectVehicles = True
+    collectPeds = True
+    collectOffscreen = False
+    #captureRate = 25
+    driveMode = 537657771 #stop at lights; use blinkers; avoid highways
+else:
+    base_folder = base_folder + "object\\"
+
+# Stores a dataset file with data coming from DeepGTAV
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=None)
+    parser.add_argument('-l', '--host', default='localhost', help='The IP where DeepGTAV is running')
+    parser.add_argument('-p', '--port', default=8000, help='The port where DeepGTAV is running')
+    default_dataset_path = None#base_folder + 'dataset.pz'
+    parser.add_argument('-d', '--dataset_path', default=default_dataset_path, help='Place to store the dataset')
+    args = parser.parse_args()
+
+    # Creates a new connection to DeepGTAV using the specified ip and port. 
+    # If desired, a dataset path and compression level can be set to store in memory all the data received in a gziped pickle file.
+    client = Client(ip=args.host, port=args.port, datasetPath=args.dataset_path, compressionLevel=9)
+    
+    print("Connecting to client...")
+    # Configures the information that we want DeepGTAV to generate and send to us. 
+    # See deepgtav/messages.py to see what options are supported
+    # rate is in captures per second
+    if collectStationary:
+        vehicles = []
+        # model, forward, right, heading, color (-1 default, 27 red, 64blue, 0 black)
+        # vehicles.append(["voltic", 20, 10, 90, 27, 0])
+        # vehicles.append(["voltic", 17, 10, 90, 64, 0])
+        # vehicles.append(["voltic", 15, 2, 90, 27, 0])
+        # vehicles.append(["voltic", 15, -2, 90, 64, 0])
+        # vehicles.append(["bus", 18, 15, 0, 0, 0])
+        # vehicles.append(["bus", 18, 15, 90, 0, 0])
+        # vehicles.append(["bus", 150, 10, 90, 0, 0])
+        # vehicles.append(["bus", 100, -20, 90, 0, 0])
+        # vehicles.append(["bus", 200, 10, 90, 0, 0])
+        # vehicles.append(["bus", 125, -50, 90, 0, 0])
+        # vehicles.append(["bus", 75, -70, 90, 0, 0])
+        # vehicles.append(["bus", 150, 80, 90, 0, 0])
+        # vehicles.append(["bus", 50, 20, 90, 0, 0])
+        # vehicles.append(["benson", 50, 0, 0, 0, 0])
+        # #vehicles.append(["trash", 60, -20, 0, 0, 0])
+        # vehicles.append(["benson", 80, -15, 0, 0, 0])
+        # vehicles.append(["benson", 100, -50, 0, 0, 0])
+        # vehicles.append(["benson", -10, 0, 0, 0, 0])
+        # vehicles.append(["benson", 5, -4, 90, 0, 0])
+        # vehicles.append(["benson", 0, 4, 90, 0, 0])
+        #vehicles.append(["vindicator", 7, 1, 0, 0, 0])
+        peds = []
+        #peds.append([0, 70, 35, 0])
+        #peds.append([1, 10, 0, 0])
+        #peds.append([2, 10, 1, 0])
+        #peds.append([9, 9, 0, 90])
+        #peds.append([1, 10, -5, 13])
+        #peds.append([0, 13, 5, 1])
+        #peds.append([2, 7, 5, -3])
+        #peds.append([0, 10, -5, 2])
+        #peds.append([0, 10, -4, 60])
+        #peds.append([9, 12, 5, 120])
+
+        #For graphics
+        #vehicles.append(["bmx", 9, -1, 0, 0, 0])
+        #peds.append([3, 10, 1, 180])
+        #peds.append([5, 8, 0, 270])
+
+        # TruPercept Scenario: Occluded pedestrian
+        #startLocation = [245, -995, 30]
+        #vehicles.append(["granger", 7, 3, 0, 0, 0])
+        #peds.append([10, 10, 5, 90])
+        #vehicles.append(["voltic", 25, -2, 180, 0, 0])
+
+        # Pitch view
+        
+        #List of locations
+        #Nearplane
+        # startLocation = [320.0,3600.0]
+
+        #Diner in mountains
+        #startLocation = [2561, 2637, 110]
+
+        # Tracks
+        # startLocation = [1041, 53, 340]
+
+        # Airport
+        # startLocation = [-942, -3500, 15]
+
+        # Pitch view
+        # startLocation = [-697.306, 995.426, 241, 25.1029]
+        # startLocation = [-539.831, 665.427, 142.673, 0]
+        # startLocation = [-554.445, 134.722, 62.6856, 313.719]
+
+        # vehicles.append(["bus", 14, 0, 0, 0, 0])
+        # startLocation = [-564.368, 26.8335, 47, 295.413]
+        #startLocation = [992, 2036, 58, 180]
+        startLocation = [1505.23,4550.77,53.0607]
+        lidarParam = 7
+        dataset = Dataset(rate=captureRate, frame=[width,height], throttle=True, brake=True, steering=True, vehicles=collectVehicles, peds=collectPeds,
+                        direction=None, speed=True, yawRate=True, location=True, time=True, offscreen=collectOffscreen, showBoxes=False, pointclouds=True,
+                        stationaryScene=True, collectTracking=tracking, vehiclesToCreate=vehicles, pedsToCreate=peds, startIndex=startIndex, lidarParam=lidarParam,
+                        recordScenario=recordScenario, positionScenario=positionScenario)
+
+        scenario = Scenario(drivingMode=[-1,0], location=startLocation, time=[11, 0], weather="CLEAR") #Stationary/manual mode
+    else:
+        
+        #set_speed = 15.0
+
+        # TruPercept Scenario: Occluded pedestrian
+        vehicles = []
+        peds = []
+        #vehicles.append(["benson", 7, 3.5, 340, 0, 0])
+        #peds.append([10, 13, 5, 90])
+        #vehicles.append(["voltic", 30, -6, 160, 0, 0])
+        #set_speed = 2.0
+        #finalDestination = [-896.67, 4380.34, 17.60]
+        # Call to start dataset collection
+
+        #finalDestination = [-841.222, 4067.840, 164.520] #raton canyon 1 end
+        #startLocation = [-256.690, 3927.622, 40.870] #raton canyon 1 start 
+
+        #finalDestination = [-2260.600, 4346.040, 43.090] #raton canyon 2 end
+        #startLocation = [-841.222, 4067.840, 164.520] #raton canyon 2 start     
+
+        #finalDestination = [790.620, 2117.660, 62.200] #hills 1 end
+        #startLocation = [920.900, 1746.310, 165.020] #hills 1 start
+
+        #finalDestination = [-2918.357, 3522.431, 18.000] # river 2 end
+        #startLocation = [-1038.000, 2891.858, 12.000] # river 2 start
+
+        #finalDestination = [-1038.000, 2891.858, 12.000] # river 1 end
+        #startLocation = [106.573, 3375.820, 35.000] # river 1 start
+
+        #finalDestination = [-692.622, 4391.801, 26.000] # raton canyon 3 end
+        #startLocation = [-1907.669, 4435.968, 43.000] # raton canyon 3 start
+
+        #finalDestination = [-1518.966, 4917.721, 67.000] # wild reserve 1 end
+        #startLocation = [-692.622, 4391.801, 26.000] # wild reserve 1 start
+
+        #finalDestination = [-99.786, 4293.715, 46.000] # wild reserve 2 end
+        #startLocation = [-1553.758, 4486.561, 20.000] # wild reserve 2 start
+
+        #finalDestination = [-124.898, 4608.377, 125.000] # galleria 1 end
+        #startLocation = [1521.083, 4547.838, 53.000] # galleria 1 start
+
+        #finalDestination = [2702.532, 4458.044, 41.000] # campi 1 end
+        #startLocation = [2523.314, 4419.216, 38.000] #campi 1 start
+
+        #finalDestination = [2268.074, 4957.801, 45.000] # campi 2 end
+        startLocation = [2702.532, 4458.044, 41.000] #campi 2 start
+
+        #finalDestination = [922.425, 1743.105, 166.000] # hill 1 end
+        #startLocation = [906.152, 2040.166, 64.000] # hill 1 start
+
+        #finalDestination = [-846.793, 5416.623, 35.000] # forest 1 end
+        #startLocation = [-511.751, 4933.529, 148.000] # forest 1 start
+
+        #finalDestination = [-1030.042, 4717.720, 237.000] # forest 2 end
+        #startLocation = [-639.837, 5084.379, 132.000] # forest 2 start
+
+        dataset = Dataset(rate=captureRate, frame=[width,height], throttle=True, brake=True, steering=True, vehicles=collectVehicles, peds=collectPeds,
+                        direction=None, speed=True, yawRate=True, location=True, time=True, offscreen=collectOffscreen, showBoxes=False, pointclouds=True,
+                        stationaryScene=False, collectTracking=tracking, vehiclesToCreate=vehicles, pedsToCreate=peds, startIndex=startIndex, recordScenario=recordScenario, positionScenario=positionScenario)
+        #startLocation = [1041, 53, 340]
+        #startLocation = [992, 2036, 58, 180]
+        #startLocation = [924, 1752, 166]
+        #startLocation = [2561, 2637]
+        #startLocation = [-1499.97, 4953.67] #fiume e raton canyon
+        # Pitch view
+        # startLocation = [-697.306, 995.426, 239, 55.1029]
+        # startLocation = [-539.831, 665.427, 142.673, 278.001]
+        # startLocation = [-554.445, 134.722, 62.6856, 313.719]
+        # startLocation = [-564.368, 26.8335, 44, 295.413]
+        scenario = Scenario(drivingMode=[driveMode,2.0], location=startLocation, weather="CLEAR", time=[11, 0]) # Driving style is set to normal, with a speed of 10.0 mph. All other scenario options are random.
+    # Send the Start request to DeepGTAV.
+    print("Starting on ", args.host, ":", args.port)
+    client.sendMessage(Start(dataset=dataset,scenario=scenario))
+
+    mex = Start(dataset=dataset,scenario=scenario)
+    print(mex.scenario.__dict__)
+
+    # if collectStationary:
+    #     stoptime = time.time() + 20
+    #     while time.time() < stoptime:
+    #         time.sleep(1)
+
+    #     scenario.location = [2000,0]
+    #     #scenario = Scenario(location=[1000,0])
+    #     print("Sending config message...")
+    #client.sendMessage(Config(dataset=dataset,scenario=scenario))
+
+    print("Message sent to client to begin.")
+    print(base_folder)
+    #print(args.dataset_path)
+    # Start listening for messages coming from DeepGTAV. We do it for 80 hours
+    stoptime = time.time() + 80*3600
+    while index < 1000000:
+    #while time.time() < stoptime:
+        if not recordScenario and not positionScenario:
+            try:
+                # We receive a message as a Python dictionary
+                message = client.recvMessage()  
+                #index = message['index']
+                print(message.keys())
+                print("location: ", message["location"])
+
+
+                print("ending index %d" % index)
+                print("\n\n")
+            except KeyboardInterrupt:
+                break
+            
+            index += 1
+    # We tell DeepGTAV to stop
+    client.sendMessage(Stop())
+    client.close()
